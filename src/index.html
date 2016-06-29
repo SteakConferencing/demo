@@ -1,0 +1,580 @@
+<!doctype html>
+<html>
+    <head>
+        <title>The STEAK Project: Demonstrator</title>
+        <meta charset="utf-8">
+
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+
+        <link rel="icon" type="image/svg+xml" href="steak-logo-centered.svg">
+        <link rel="icon" type="image/x-icon" href="steak-logo-centered.png">
+
+        <style>
+            @font-face {
+                font-family: 'Marvel';
+                font-style: normal;
+                font-weight: 400;
+                src: local('Marvel'), local('Marvel-Regular'), url(marvel.woff2) format('woff2');
+                unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2212, U+2215, U+E0FF, U+EFFD, U+F000;
+            }
+
+            #client {
+                width: 40em;
+                height: 15em;
+                margin:0 auto;
+                border: 0.1em solid black;
+
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+
+                font-family: 'Marvel', sans-serif;
+                text-align: center;
+            }
+
+            .fullscreen {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+                top: 0;
+                left: 0;
+
+                display: none;
+            }
+
+            .overlay {
+                position: absolute;
+                width: 100%;
+                height: 100%;
+
+                top: 0;
+                left: 0;
+
+                display: flex;
+
+                overflow: hidden;
+            }
+
+            .overlay > img {
+                margin-top: auto;
+                margin-bottom: auto;
+                width: 10em;
+            }
+            .overlay > div {
+                flex: 1;
+            }
+
+            #calling > div:first-child {
+                width: 100%;
+                height: 75%;
+                background-image: url("steak-logo.svg");
+                background-repeat: no-repeat;
+                background-position: center;
+                background-size: 40%;
+
+                animation-name: initialAnimation;
+                animation-duration: 2s;
+                animation-iteration-count: infinite;
+                animation-fill-mode: both;
+            }
+
+            @keyframes initialAnimation {
+                0%   {opacity: 1}
+                50%  {opacity: 0.5}
+                100% {opacity: 1}
+            }
+
+            #calling > div:nth-child(3) {
+                height: 1em;
+                width: 15em;
+                margin: 0 auto;
+                background-color: gray;
+                animation-name: progressBar;
+                animation-duration: 20s;
+                animation-timing-function: linear;
+            }
+            @keyframes progressBar {
+                0%   {width: 0em}
+                100% {width: 15em}
+            }
+        </style>
+        <style>
+            .slider {
+                width: 6em;
+                height: 2em;
+                background: #333;
+                position: relative;
+                border-radius: 4em;
+                box-shadow: inset 0px 0.1em 0.1em rgba(0, 0, 0, 0.5), 0px 0.1em 0.1em rgba(255, 255, 255, 0.2);
+            }
+            .slider:after {
+                content: 'OFF';
+                color: #000;
+                position: absolute;
+                right: 1em;
+                z-index: 0;
+                font: 0.8em/2em Arial, sans-serif;
+                font-weight: bold;
+                text-shadow: 0.1em 0.1em 0px rgba(255, 255, 255, 0.15);
+            }
+            .slider:before {
+                content: 'ON';
+                color: #27ae60;
+                position: absolute;
+                left: 0.5em;
+                z-index: 0;
+                font: 0.8em/2em Arial, sans-serif;
+                font-weight: bold;
+            }
+            .slider label {
+                display: block;
+                width: 2.7em;
+                height: 1.8em;
+                cursor: pointer;
+                position: absolute;
+                top: 0.2em;
+                left: 0.2em;
+                z-index: 1;
+                background: #fcfff4;
+                background: -webkit-linear-gradient(top, #fcfff4 0%, #dfe5d7 40%, #b3bead 100%);
+                background: linear-gradient(to bottom, #fcfff4 0%, #dfe5d7 40%, #b3bead 100%);
+                border-radius: 4em;
+                -webkit-transition: all 0.4s ease;
+                transition: all 0.4s ease;
+                box-shadow: 0px 0.2em 0.3em 0px rgba(0, 0, 0, 0.3);
+            }
+            .slider input[type=checkbox] {
+                visibility: hidden;
+            }
+            .slider input[type=checkbox]:checked + label {
+                left: 3.3em;
+            }
+
+            .btnreposition {
+                height: 2em;
+                background: #FF4D4D;
+                border-radius: 4em;
+                box-shadow: inset 0px 0.1em 0.1em rgba(0, 0, 0, 0.5), 0px 0.1em 0px rgba(255, 255, 255, 0.2);
+            }
+
+            .btnhangup {
+                width: 6em;
+                height: 2em;
+                background: #FF4D4D;
+                border-radius: 4em;
+                box-shadow: inset 0px 0.1em 0.1em rgba(0, 0, 0, 0.5), 0px 0.1em 0px rgba(255, 255, 255, 0.2);
+                margin-left: 4em;
+            }
+        </style>
+
+        <script src="sip-0.7.5.js"></script>
+
+        <script type="text/javascript">
+
+            function Client(serverurl, serverdomain, username, password) {
+                this.serverurl = serverurl;
+                this.serverdomain = serverdomain;
+                this.username = username;
+                this.password = password;
+
+                this.userAgent = null;
+                this.session = null;
+
+                this.audioPlay = new Audio();
+                this.audioRecord = new Audio();
+
+                this.audioRecord.muted = true; //Sidetone initially disabled
+
+                console.log("Client: created (" + this.serverurl + ", " + this.serverdomain + ")");
+            }
+            Client.prototype.constructor = Client;
+
+            Client.prototype.start = function (conferenceNumber) {
+                this.conferenceNumber = conferenceNumber;
+                this.userAgent = new SIP.UA({
+                    uri: this.username + "@" + this.serverdomain,
+                    wsServers: this.serverurl,
+                    authorizationUser: this.username,
+                    password: this.password,
+                    hackIpInContact: true,
+                    noAnswerTimeout: 6,
+                    traceSip: true,
+                    autostart: false
+                });
+                //this.userAgent.on('connected', function () {console.log("Client: connected....");}); //Not required.
+                this.userAgent.on('registered', this.onRegistered.bind(this));
+                this.userAgent.on('registrationFailed', this.onRegistrationFailed.bind(this));
+                this.userAgent.on('disconnected', this.onDisconnect.bind(this)); //Disconnect is also called, if server returns 404! No reason is provided.
+
+                console.log("Client: registering....");
+                this._uiConnecting();
+
+                this.websocketTimeoutHandle = setTimeout(this.onWebsocketConnectTimeout.bind(this), 20000); //Please also adjust CSS animation duration of calling > div:nth-child(2)
+                this.userAgent.start();
+            };
+
+            Client.prototype.onWebsocketConnectTimeout = function () {
+                console.log("Client: connect timeout.");
+                this._uiError("Could not connect to conferencing system.<br />System did not respond within 20s and might be off permanently.");
+            };
+
+            Client.prototype.onRegistered = function () {
+                if (this.session !== null) {
+                    console.log("Client: re-registered; call remains ongoing.");
+                    return;
+                }
+                clearTimeout(this.websocketTimeoutHandle);
+
+                var callNumber = this.conferenceNumber;
+                var call_uri = 'sip:' + callNumber + '@' + this.serverdomain;
+                console.log("Client: starting call to " + call_uri);
+
+                this.session = this.userAgent.invite(call_uri, {
+                    media: {
+                        constraints: {
+                            audio: {
+                                optional: [],
+                                mandatory: {
+                                    echoCancellation: false
+                                }
+                            },
+                            video: false
+                        },
+                        render: {
+                            remote: this.audioPlay,
+                            local: this.audioRecord
+                        }
+                    }
+                });
+                this.session.on('accepted', this.onCallAccepted.bind(this));
+                this.session.on('failed', this.onCallFailed.bind(this));
+
+                this.session.mediaHandler.on('getDescription', this._sdpRewrite)
+                        .on('setDescription', this._sdpRewrite)
+                        .on('userMediaRequest', function (constrains) {
+                            constrains = {
+                                audio: {
+                                    optional: [],
+                                    mandatory: {
+                                        echoCancellation: false
+                                    }
+                                },
+                                video: false
+                            };
+                            console.log("Client: User media request triggered.");
+                        })
+                        .on('userMediaFailed', function (error) {
+                            console.log("Client: User media request failed: " + error);
+                            this._audioUnavailable(error);
+                        });
+            };
+
+            Client.prototype.onRegistrationFailed = function (cause) {
+                console.log("Client: register failed");
+                this._uiError("Could not register at the conferencing system.<br />Reported reason is: " + cause);
+            };
+
+            Client.prototype.onCallAccepted = function () {
+                console.log("Client: call accepted");
+                this._uiConferencing();
+            };
+
+            Client.prototype.onCallFailed = function (reason) {
+                console.log("Client: call failed due to " + reason.cause);
+                this._uiError("Could not join conference.<br />Reported reason is: " + reason.cause);
+            };
+
+            Client.prototype.onDisconnect = function (transport) {
+                console.log("Client: got disconnect: " + transport.lastTransportError);
+                this.userAgent.stop();
+
+                if (transport.lastTransportError === "undefined") {
+                    this._uiError("Could not connect to the conferencing system."); //Could not even connect...
+                } else {
+                    console.log("Client: disconnect due to permanent failure");
+                    this._uiError("We got disconnected from the conferencing system: " + transport.lastTransportError);
+                }
+            };
+
+            //UI callback functions
+            Client.prototype.userMute = function (input) {
+                console.log("Client: changing mute state");
+                if (input.checked === true) {
+                    this.session.unmute();
+                } else {
+                    this.session.mute();
+                }
+            };
+
+            Client.prototype.userSpatial = function () {
+                console.log("Client: toggle spatial");
+                this.session.dtmf("*"); 
+                this.session.dtmf("8"); //Depends on Server configuration
+            };
+
+            Client.prototype.userSidetone = function () {
+                console.log("Client: changing sidetone state");
+                this.audioRecord.muted = !this.audioRecord.muted;
+            };
+
+            Client.prototype.userReposition = function () {
+                console.log("Client: randomize participants");
+                this.session.dtmf("*"); 
+                this.session.dtmf("9"); //Depends on Server configuration
+            };
+
+            Client.prototype.userHangup = function () { //Unused
+                console.log("Client: hangup");
+                this.userAgent.off('disconnected'); //Its ok now ;)
+                window.onbeforeunload = undefined;
+
+                if (this.session !== null && this.session !== undefined && this.session.bye instanceof Function) {
+                    this.session.bye();
+                }
+                if (this.userAgent !== null && this.userAgent !== undefined && this.userAgent.stop instanceof Function) {
+                    this.userAgent.stop();
+                }
+                this._uiHideAll();
+                document.getElementById("postCall").style.display = "initial";
+            };
+
+            //Internal helper functions
+            Client.prototype._sdpRewrite = function (sdp) {
+                sdp.sdp = sdp.sdp.replace("a=fmtp:111", "a=fmtp:111 stereo=1;sprop-stereo=1;maxplaybackrate=48000;sprop-maxcapturerate=48000;minptime=10;maxaveragebitrate=20000;useinbandfec=1;");
+                return sdp;
+            };
+
+            //UI
+            Client.prototype._uiPreviewEqualizer = function (deviceInfo) { //Enable local preview Equalizer              
+                this._uiHideAll();
+
+                var uiConferenceNumber = document.getElementById("precall");
+                uiConferenceNumber.style.display = "initial";
+
+                var ctx = new AudioContext();
+                var analyser = ctx.createAnalyser();
+                var source = ctx.createMediaStreamSource(deviceInfo);
+                source.connect(analyser);
+                analyser.fftSize = 32;
+                var bufferLength = analyser.frequencyBinCount;
+                var dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                var canvas = document.getElementById("precallEqualizer");
+                var canvasCtx = canvas.getContext("2d");
+
+                var functionDraw = function () {
+                    canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+                    analyser.getByteFrequencyData(dataArray);
+
+                    var barWidth = (canvas.width / (bufferLength / 2)); //Only use lower frequencies
+                    for (var i = 0; i < bufferLength / 2; i++) {
+                        canvasCtx.fillStyle = 'rgba(' + (dataArray[i] + 100) + ',50,50, 0.3)';
+                        canvasCtx.fillRect(i * barWidth + 1, canvas.height / 2 - dataArray[i] / 2, barWidth, dataArray[i]);
+                    }
+                    drawVisual = requestAnimationFrame(functionDraw.bind(this));
+                };
+                requestAnimationFrame(functionDraw.bind(this));
+            };
+
+            Client.prototype._uiConnecting = function () {
+                this._uiHideAll();
+
+                var uiCallSetup = document.getElementById("calling");
+                uiCallSetup.style.display = "initial";
+
+                uiCallSetup.getElementsByTagName("div")[1].innerHTML = "Joining conference room #" + this.conferenceNumber;
+            };
+
+            Client.prototype._uiConferencing = function () {
+                this._uiHideAll();
+
+                var uiInCallUI = document.getElementById("incall");
+
+                uiInCallUI.style.display = "initial";
+                uiInCallUI.getElementsByTagName("span")[0].innerHTML = "#" + this.conferenceNumber;
+
+                window.onbeforeunload = function () {
+                   return "You are in a conference. Do you want to leave?";
+                };
+
+                this._uiConferencingEqualizer();
+            };
+
+            Client.prototype._uiConferencingEqualizer = function () { //Enable local and remote inCall Equalizer
+                this._uiHideAll();
+                document.getElementById("incall").style.display = "initial";
+
+                var ctx = new AudioContext();
+
+                var analyserLocal = ctx.createAnalyser();
+                var sourceLocal = ctx.createMediaStreamSource(this.session.getLocalStreams()[0]);
+                sourceLocal.connect(analyserLocal);
+                analyserLocal.fftSize = 32;
+
+                var analyserRemote = ctx.createAnalyser();
+                var sourceRemote = ctx.createMediaStreamSource(this.session.getRemoteStreams()[0]);
+                sourceRemote.connect(analyserRemote);
+                analyserRemote.fftSize = 32;
+
+                var bufferLength = analyserRemote.frequencyBinCount;
+
+                var dataArrayLocal = new Uint8Array(analyserLocal.frequencyBinCount);
+                var dataArrayRemote = new Uint8Array(analyserRemote.frequencyBinCount);
+
+                var canvas = document.getElementById("incallEqualizer");
+                var canvasCtx = canvas.getContext("2d");
+
+                var functionDraw = function () {
+                    canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    var barWidth = (canvas.width / (bufferLength / 2)); //Only use lower frequencies
+
+                    analyserLocal.getByteFrequencyData(dataArrayLocal);
+
+                    if (!this.session.mediaHandler.audioMuted) {
+                        for (var i = 0; i < bufferLength / 2; i++) {
+                            canvasCtx.fillStyle = 'rgba(' + (dataArrayLocal[i] + 100) + ',50,50, 0.5)';
+                            canvasCtx.fillRect(i * barWidth + 1, canvas.height / 2, barWidth, -dataArrayLocal[i] / 4);
+                        }
+                    }
+
+                    analyserRemote.getByteFrequencyData(dataArrayRemote);
+                    for (var i = 0; i < bufferLength / 2; i++) {
+                        canvasCtx.fillStyle = 'rgba(50,' + (dataArrayRemote[i] + 100) + ',50, 0.5)';
+                        canvasCtx.fillRect(i * barWidth + 1, canvas.height / 2, barWidth, dataArrayRemote[i] / 4);
+                    }
+
+                    drawVisual = requestAnimationFrame(functionDraw.bind(this));
+                };
+                requestAnimationFrame(functionDraw.bind(this));
+            };
+
+            Client.prototype._uiError = function (message) {
+                this._uiHideAll();
+                var uiError = document.getElementById("error");
+                uiError.getElementsByTagName("span")[0].innerHTML = message;
+
+                uiError.style.display = "initial";
+            };
+
+            //Helper function to hide all elements
+            Client.prototype._uiHideAll = function () {
+                var uiElements = document.getElementById("client").children;
+                for (var i = 0; i < uiElements.length; i++) {
+                    uiElements[i].style.display = "none";
+                }
+            };
+
+            // Initial Error
+            Client.prototype._audioUnavailable = function (error) {
+                this._uiError("Could not open audio device (" + error.name + ").<br>Joining a conference without access to audio devices is not possible.");
+            };
+        </script>
+        <script>
+            client = null;
+            function startClient() {
+                if (!("SIP" in window)) {
+                    document.body.innerHTML = "<h1>The STEAK project</h1><br />Could not load the client.<br>We are truly sorry for the inconvenience."; //Remove load screen
+                    return;
+                }
+
+                client = new Client("wss://demo.steakconferencing.de/ws", "demo.steakconferencing.de", "101", "101");
+                var clientUI = document.getElementById("client");
+
+                //Enable audio preview
+                navigator.webkitGetUserMedia({audio: true}, client._uiPreviewEqualizer.bind(client), client._audioUnavailable.bind(client)); //DEPRECATED! PROPRIETARY!
+                clientUI.style.display = "initial";
+            }
+        </script>
+    </head>
+
+    <body onload="startClient()">
+        <div id="client" style="display:none;"> 
+
+            <div id="acquireAudio" class="fullscreen" style="display:initial">
+                <div class="overlay">
+
+                    <img src="steak-logo.svg" alt="STEAK logo"/>
+                    <!-- Client: Audio setup -->
+                    <div style="margin:auto;">
+                        Opening audio device...
+                    </div>
+                </div>
+            </div>
+
+            <!-- initialUI -->
+            <div id="precall" class="fullscreen">
+                <div  class="overlay">
+                    <img src="steak-logo.svg" alt="STEAK logo"/>
+                    <!-- Client: Audio setup -->
+                    <canvas id="precallEqualizer" style="position:absolute;width:30em;height:100%;top:0;z-index:-1" width="500" height="500"></canvas>
+                    <form onsubmit="client.start(this.firstElementChild.value);return false;" style="margin:auto;width:15em;background-color:transparent;">
+                        <input type="text" placeholder="#Conference room" required="required" pattern="[0-9]{3}" title="#Conference rooms are identified by 3 digits" autofocus="autofocus" style="width:100%;text-align:center;background-color:rgba(255,255,255,0.5);border-style:dashed;border-color:rgba(0,0,0,0.5)"/> <br />
+                        <input type="submit" value="Join Conference" style="width:100%;"/>
+                    </form>
+                </div>
+            </div>
+
+            <!--Calling-->
+            <div id="calling" class="fullscreen">
+                <div></div> <!-- STEAK Animation -->
+                <div></div> <!-- text -->
+                <div onclick="client.userHangup()"></div> <!-- Progress bar -->
+            </div>
+
+            <!-- InCall -->
+            <div id="incall" class="fullscreen">
+                <div class="overlay">
+                    <img src="steak-logo.svg" alt="STEAK logo" />
+                    <div>
+                        <canvas id="incallEqualizer" style="position:absolute;width:30em;height:100%;top:0;left:10em;z-index:-1" width="500" height="500"></canvas>
+                        <div style="text-align:center;margin-top:5em;">Conference room<br /><span></span>
+                            <table style="font-size:small;margin-top:3em;margin-left:auto;margin-right:auto">
+                                <tr><td>Sidetone</td><td>Microphone</td><td>3D Audio</td><td></td></tr>
+                                <tr>
+                                    <td class="slider">
+                                        <input type="checkbox" id="sidetone" name="check" onchange="client.userSidetone()"/>
+                                        <label for="sidetone"></label>
+                                    </td>
+                                    <td class="slider">
+                                        <input type="checkbox" id="microphone" name="check" checked onchange="client.userMute(this)"/>
+                                        <label for="microphone"></label>
+                                    </td>
+                                    <td class="slider">
+                                        <input type="checkbox" id="spatial" name="check" checked onchange="client.userSpatial()"/>
+                                        <label for="spatial"></label>
+                                    </td>
+                                    <td style="z-index:1;height:2em;">
+                                        <input  class="btnreposition" type="button" value="Re-position" onclick="client.userReposition()"  />
+                                    </td>
+                                    <td style="z-index:1;height:2em;">
+                                        <input  class="btnhangup" type="button" value="Hangup" onclick="client.userHangup()"  />
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="error" class="fullscreen">
+                <div class="overlay">
+                    <img src="steak-logo.svg" alt="STEAK logo" />
+                    <div style="text-align:center;margin:auto;max-width:30em;">
+                      Something did not work as expected.<br />Sorry for the inconvenience.<br /><br />
+                      To try joining a conference again, please click <a href="">here</a>.<br /><br />
+                      <span style="font-size:small;"></span></div>
+                </div>
+            </div>
+
+            <div id="postCall" class="fullscreen">
+                <div class="overlay">
+                    <img src="steak-logo.svg" alt="STEAK logo" />
+                    <div style="text-align:center;margin:auto;">Call terminated.<br />Thanks for using trying the <a href="http://steakconferencing.de">STEAK</a>.<br />To join conference call, please click <a href="">here</a>.</div>
+                </div>
+            </div>
+
+        </div>
+    </body>
+</html>
