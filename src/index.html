@@ -475,22 +475,34 @@
         <script>
             client = null;
             function startClient() {
+                var startUI = document.getElementById("starting");
                 if (!("SIP" in window)) {
-                    document.body.innerHTML = "<h1>The STEAK project</h1><br />Could not load the client.<br>We are truly sorry for the inconvenience."; //Remove load screen
+                    startUI.innerHTML += "<br /><h2>Error</h2>Client could not completely loaded.<br>Please try to reload the webpage.";
                     return;
                 }
 
                 client = new Client("wss://demo.steakconferencing.de/ws", "demo.steakconferencing.de", "101", "101");
                 var clientUI = document.getElementById("client");
 
-                //Enable audio preview
+                //Request microphone access
+                if (typeof navigator.webkitGetUserMedia !== "function") {
+                    startUI.innerHTML += "<br /><h2>Error</h2>Sadly, your webbrowser is not compatible.<br>Please use Google Chrome or Chromium.";
+                    console.log("Your webbrowser does not support navigator.webkitGetUserMedia(). Client wont work.");
+                    return;
+                }
+
                 navigator.webkitGetUserMedia({audio: true}, client._uiPreviewEqualizer.bind(client), client._audioUnavailable.bind(client)); //DEPRECATED! PROPRIETARY!
+                startUI.style.display = "none";
                 clientUI.style.display = "initial";
             }
         </script>
     </head>
 
     <body onload="startClient()">
+        <div id="starting">
+            <h1><a href="http://www.steakconferencing.de">The STEAK project</a></h1>
+            Loading...
+        </div>
         <div id="client" style="display:none;"> 
 
             <div id="acquireAudio" class="fullscreen" style="display:initial">
