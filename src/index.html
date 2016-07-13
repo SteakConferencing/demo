@@ -189,7 +189,7 @@
             Client.prototype.constructor = Client;
 
             Client.prototype.start = function (conferenceNumber) {
-                this.conferenceNumber = conferenceNumber;
+                this.conferenceNumber = ("" + conferenceNumber).replace("#", "");
                 this.userAgent = new SIP.UA({
                     uri: this.username + "@" + this.serverdomain,
                     wsServers: this.serverurl,
@@ -526,7 +526,7 @@
                     <div style="margin:auto;background-color:transparent;">
                         <p>Welcome to the demo system of <a href="http://www.steakconferencing.de">the STEAK project</a></p>
                         <form onsubmit="client.start(this.firstElementChild.value);return false;" style="margin:auto;width:15em;background-color:transparent;">
-                            <input type="text" placeholder="#Conference room" required="required" pattern="[0-9]{3}|demo[12]{0,1}" title="#Conference rooms are identified by 3 digits" autofocus="autofocus" style="width:100%;text-align:center;background-color:rgba(255,255,255,0.5);border-style:dashed;border-color:rgba(0,0,0,0.5)"/> <br />
+                            <input type="text" placeholder="#Conference room" required="required" pattern="[#]{0,1}[0-9]{3}|demo[12]{0,1}" title="#Conference rooms are identified by 3 digits" autofocus="autofocus" style="width:100%;text-align:center;background-color:rgba(255,255,255,0.5);border-style:dashed;border-color:rgba(0,0,0,0.5)"/> <br />
                             <input type="submit" value="Join Conference" style="width:100%;"/>
                         </form>
                         <p style="font-size:small">
