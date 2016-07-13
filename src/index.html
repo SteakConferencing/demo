@@ -296,6 +296,11 @@
             };
 
             //UI callback functions
+            Client.prototype.userHeadphonePosition = function() {
+                var audio = document.getElementById("headphoneTest");
+                audio.play();
+            };
+
             Client.prototype.userMute = function (input) {
                 console.log("Client: changing mute state");
                 if (input.checked === true) {
@@ -307,8 +312,7 @@
 
             Client.prototype.userSpatial = function () {
                 console.log("Client: toggle spatial");
-                this.session.dtmf("*"); 
-                this.session.dtmf("8"); //Depends on Server configuration
+                this.session.dtmf("*8"); //Depends on Server configuration
             };
 
             Client.prototype.userSidetone = function () {
@@ -318,8 +322,7 @@
 
             Client.prototype.userReposition = function () {
                 console.log("Client: randomize participants");
-                this.session.dtmf("*"); 
-                this.session.dtmf("9"); //Depends on Server configuration
+                this.session.dtmf("*9"); //Depends on Server configuration 
             };
 
             Client.prototype.userHangup = function () { //Unused
@@ -508,10 +511,17 @@
                     <img src="steak-logo.svg" alt="STEAK logo"/>
                     <!-- Client: Audio setup -->
                     <canvas id="precallEqualizer" style="position:absolute;width:30em;height:100%;top:0;z-index:-1" width="500" height="500"></canvas>
-                    <form onsubmit="client.start(this.firstElementChild.value);return false;" style="margin:auto;width:15em;background-color:transparent;">
-                        <input type="text" placeholder="#Conference room" required="required" pattern="[0-9]{3}" title="#Conference rooms are identified by 3 digits" autofocus="autofocus" style="width:100%;text-align:center;background-color:rgba(255,255,255,0.5);border-style:dashed;border-color:rgba(0,0,0,0.5)"/> <br />
-                        <input type="submit" value="Join Conference" style="width:100%;"/>
-                    </form>
+                    <div style="margin:auto;background-color:transparent;">
+                        <p>Welcome to the demo system of <a href="http://www.steakconferencing.de">the STEAK project</a></p>
+                        <form onsubmit="client.start(this.firstElementChild.value);return false;" style="margin:auto;width:15em;background-color:transparent;">
+                            <input type="text" placeholder="#Conference room" required="required" pattern="[0-9]{3}|demo[12]{0,1}" title="#Conference rooms are identified by 3 digits" autofocus="autofocus" style="width:100%;text-align:center;background-color:rgba(255,255,255,0.5);border-style:dashed;border-color:rgba(0,0,0,0.5)"/> <br />
+                            <input type="submit" value="Join Conference" style="width:100%;"/>
+                        </form>
+                        <p style="font-size:small">
+                            <br />For a satisfying experience <b>(a)</b> check the position of your <a href="#" onclick="client.userHeadphonePosition()">headphones</a>,<br /> <b>(b)</b> use Google Chrome or Chromium, and <b>(c)</b> use a <i>proper</i> Internet connection.
+                        </p>
+                        <p style="font-size:small">For testing try out conference rooms <a href="#" onclick="client.start('#demo1');">#demo1</a> or <a href="#" onclick="client.start('#demo2');">#demo2</a>.</p>
+                    </div>
                 </div>
             </div>
 
@@ -574,6 +584,11 @@
                 </div>
             </div>
 
+            <audio id="headphoneTest" hidden="hidden" preload="preload" controls="">
+                <source type="audio/opus" src="headphones.opus" />
+                <source type="audio/mpeg" src="headphones.mp3" />
+                <source type="audio/wav" src="headphones.wav" />
+            </audio>
         </div>
     </body>
 </html>

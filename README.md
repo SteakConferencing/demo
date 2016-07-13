@@ -23,3 +23,8 @@ If you want to use your own server, you need to adjust the parameters according 
 `new Client("WEBSOCKET-URL", "DOMAIN", "USERNAME", "PASSWORD");`
 
 If you want to use different DTMF-codes for interaction while in a conference (e.&thinsp;g., 3D audio: on/off), you need to modify all lines using the function `this.session.dtfm()` accordingly.
+
+
+Resources
+---
+headphones.{wav, opus, mp3} are based upon the [ALSA](http://www.alsa-project.org/) files `front_left.wav` and `front_right.wav`.
