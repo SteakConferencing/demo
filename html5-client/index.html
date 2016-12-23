@@ -279,8 +279,8 @@
             };
 
             Client.prototype.onCallFailed = function (reason) {
-                console.log("Client: call failed due to " + reason.cause);
-                this._uiError("Could not join conference.<br />Reported reason is: " + reason.cause);
+                console.log("Client: call failed due to " + reason);
+                this._uiError("Could not join conference.<br />Reported reason is: " + reason);
             };
 
             Client.prototype.onDisconnect = function (transport) {
@@ -322,7 +322,7 @@
 
             Client.prototype.userReposition = function () {
                 console.log("Client: randomize participants");
-                this.session.dtmf("*9"); //Depends on Server configuration 
+                this.session.dtmf("*9"); //Depends on Server configuration
             };
 
             Client.prototype.userHangup = function () { //Unused
@@ -347,7 +347,7 @@
             };
 
             //UI
-            Client.prototype._uiPreviewEqualizer = function (deviceInfo) { //Enable local preview Equalizer              
+            Client.prototype._uiPreviewEqualizer = function (deviceInfo) { //Enable local preview Equalizer
                 this._uiHideAll();
 
                 var uiConferenceNumber = document.getElementById("precall");
@@ -481,7 +481,7 @@
                     return;
                 }
 
-                client = new Client("wss://demo.steakconferencing.de/ws", "demo.steakconferencing.de", "101", "101");
+                client = new Client("wss://" + window.location.hostname + "/ws", "demo.steakconferencing.de", "101", "101");
                 var clientUI = document.getElementById("client");
 
                 //Request microphone access
@@ -503,7 +503,7 @@
             <h1><a href="http://www.steakconferencing.de">The STEAK project</a></h1>
             Loading...
         </div>
-        <div id="client" style="display:none;"> 
+        <div id="client" style="display:none;">
 
             <div id="acquireAudio" class="fullscreen" style="display:initial">
                 <div class="overlay">

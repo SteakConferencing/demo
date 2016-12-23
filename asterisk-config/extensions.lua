@@ -16,7 +16,7 @@ extensions.conference = {
 	  app.sayDigits(room, "f")
 
 	  app.confBridge(room)
-  end
+  end;
 
   ["_XXX"] = function(c, e)
 	  app.answer()
